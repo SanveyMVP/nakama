@@ -74,7 +74,11 @@ func StartApiServer(logger *zap.Logger, startupLogger *zap.Logger, db *sql.DB, j
 		grpc.StatsHandler(&ocgrpc.ServerHandler{IsPublicEndpoint: true}),
 		grpc.MaxRecvMsgSize(int(config.GetSocket().MaxMessageSizeBytes)),
 		grpc.UnaryInterceptor(func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-			return securityInterceptorFunc(logger, config, ctx, req, info)
+			ctx, err := securityInterceptorFunc(logger, config, ctx, req, info)
+			if err != nil {
+				return nil, err
+			}
+			return handler(ctx, req)
 		}),
 	}
 	if config.GetSocket().TLSCert != nil {
@@ -223,7 +227,7 @@ func securityInterceptorFunc(logger *zap.Logger, config Config, ctx context.Cont
 	switch info.FullMethod {
 	case "/nakama.api.Nakama/Healthcheck":
 		// Healthcheck has no security.
-		return nil, nil
+		return ctx, nil
 	case "/nakama.api.Nakama/AuthenticateCustom":
 		fallthrough
 	case "/nakama.api.Nakama/AuthenticateDevice":
