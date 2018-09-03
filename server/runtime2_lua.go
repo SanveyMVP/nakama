@@ -133,7 +133,7 @@ func NewRuntimeProviderLua(logger, startupLogger *zap.Logger, db *sql.DB, jsonpb
 	}
 
 	stdLibs := map[string]lua.LGFunction{
-		lua.LoadLibName:   OpenPackage2(moduleCache),
+		lua.LoadLibName:   OpenPackage(moduleCache),
 		lua.BaseLibName:   lua.OpenBase,
 		lua.TabLibName:    lua.OpenTable,
 		lua.OsLibName:     OpenOs,
@@ -394,7 +394,7 @@ func (rp *RuntimeProviderLua) MatchmakerMatched(entries []*MatchmakerEntry) (str
 		return "", false, errors.New("Runtime Matchmaker Matched function not found.")
 	}
 
-	ctx := NewLuaContext(runtime.vm, runtime.luaEnv, ExecutionModeMatchmaker, nil, 0, "", "", "", "", "")
+	ctx := NewRuntimeLuaContext(runtime.vm, runtime.luaEnv, RuntimeExecutionModeMatchmaker, nil, 0, "", "", "", "", "")
 
 	entriesTable := runtime.vm.CreateTable(len(entries), 0)
 	for i, entry := range entries {

@@ -80,7 +80,7 @@ func NewRuntime2LuaMatchCore(logger *zap.Logger, db *sql.DB, config Config, soci
 	// Create the context to be used throughout this match.
 	ctx := vm.CreateTable(0, 6)
 	ctx.RawSetString(__RUNTIME_LUA_CTX_ENV, RuntimeLuaConvertMapString(vm, config.GetRuntime().Environment))
-	ctx.RawSetString(__RUNTIME_LUA_CTX_MODE, lua.LString(ExecutionModeMatch.String()))
+	ctx.RawSetString(__RUNTIME_LUA_CTX_MODE, lua.LString(RuntimeExecutionModeMatch.String()))
 	ctx.RawSetString(__RUNTIME_LUA_CTX_MATCH_ID, lua.LString(fmt.Sprintf("%v.%v", id.String(), node)))
 	ctx.RawSetString(__RUNTIME_LUA_CTX_MATCH_NODE, lua.LString(node))
 
@@ -163,7 +163,7 @@ func (r *Runtime2LuaMatchCore) MatchInit(params map[string]interface{}) (interfa
 	if params == nil {
 		r.vm.Push(lua.LNil)
 	} else {
-		r.vm.Push(ConvertValue(r.vm, params))
+		r.vm.Push(RuntimeLuaConvertMap(r.vm, params))
 	}
 
 	err := r.vm.PCall(2, lua.MultRet, nil)
@@ -655,6 +655,6 @@ func (r *Runtime2LuaMatchCore) matchLabelUpdate(l *lua.LState) int {
 
 	r.labelUpdateFn(input)
 	// This must be executed from inside a match call so safe to update here.
-	r.ctx.RawSetString(__CTX_MATCH_LABEL, lua.LString(input))
+	r.ctx.RawSetString(__RUNTIME_LUA_CTX_MATCH_LABEL, lua.LString(input))
 	return 0
 }

@@ -23,7 +23,6 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
-	"sync"
 	"syscall"
 	"time"
 
@@ -95,38 +94,25 @@ func main() {
 
 	// Access to social provider integrations.
 	socialClient := social.NewClient(5 * time.Second)
-	// Used to govern once-per-server-start executions in all Lua runtime instances, across both pooled and match VMs.
-	once := &sync.Once{}
 
 	// Start up server components.
 	matchmaker := server.NewLocalMatchmaker(startupLogger, config.GetName())
 	sessionRegistry := server.NewSessionRegistry()
 	tracker := server.StartLocalTracker(logger, sessionRegistry, jsonpbMarshaler, config.GetName())
 	router := server.NewLocalMessageRouter(sessionRegistry, tracker, jsonpbMarshaler)
-	stdLibs, modules, err := server.LoadRuntimeModules(startupLogger, config)
-	if err != nil {
-		startupLogger.Fatal("Failed reading runtime modules", zap.Error(err))
-	}
 	leaderboardCache := server.NewLocalLeaderboardCache(logger, startupLogger, db)
 	matchRegistry := server.NewLocalMatchRegistry(logger, config, tracker, config.GetName())
 	tracker.SetMatchJoinListener(matchRegistry.Join)
 	tracker.SetMatchLeaveListener(matchRegistry.Leave)
 	runtime, err := server.NewRuntime2(logger, startupLogger, db, jsonpbMarshaler, jsonpbUnmarshaler, config, socialClient, leaderboardCache, sessionRegistry, matchRegistry, tracker, router)
-	// Separate module evaluation/validation from module loading.
-	// We need the match registry to be available to wire all functions exposed to the runtime, which in turn needs the modules at least cached first.
-	regCallbacks, err := server.ValidateRuntimeModules(logger, startupLogger, db, config, socialClient, leaderboardCache, sessionRegistry, matchRegistry, tracker, router, stdLibs, modules, once)
 	if err != nil {
 		startupLogger.Fatal("Failed initializing runtime modules", zap.Error(err))
 	}
-	runtimePool := server.NewRuntimePool(logger, startupLogger, db, config, socialClient, leaderboardCache, sessionRegistry, matchRegistry, tracker, router, stdLibs, modules, regCallbacks, once)
-	if err != nil {
-		startupLogger.Fatal("Failed initializing runtime modules", zap.Error(err))
-	}
-	pipeline := server.NewPipeline(logger, config, db, jsonpbMarshaler, jsonpbUnmarshaler, sessionRegistry, matchRegistry, matchmaker, tracker, router, runtime, runtimePool)
+	pipeline := server.NewPipeline(logger, config, db, jsonpbMarshaler, jsonpbUnmarshaler, sessionRegistry, matchRegistry, matchmaker, tracker, router, runtime)
 	metrics := server.NewMetrics(logger, startupLogger, config)
 
 	consoleServer := server.StartConsoleServer(logger, startupLogger, config, db)
-	apiServer := server.StartApiServer(logger, startupLogger, db, jsonpbMarshaler, jsonpbUnmarshaler, config, socialClient, leaderboardCache, sessionRegistry, matchRegistry, matchmaker, tracker, router, pipeline, runtime, runtimePool)
+	apiServer := server.StartApiServer(logger, startupLogger, db, jsonpbMarshaler, jsonpbUnmarshaler, config, socialClient, leaderboardCache, sessionRegistry, matchRegistry, matchmaker, tracker, router, pipeline, runtime)
 
 	gaenabled := len(os.Getenv("NAKAMA_TELEMETRY")) < 1
 	cookie := newOrLoadCookie(config)

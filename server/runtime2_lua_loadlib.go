@@ -49,46 +49,7 @@ func loGetPath(env string, defpath string) string {
 	return path
 }
 
-func OpenPackage2(moduleCache *RuntimeLuaModuleCache) func(L *lua.LState) int {
-	return func(L *lua.LState) int {
-		loLoaderCache := func(L *lua.LState) int {
-			name := L.CheckString(1)
-			module, ok := moduleCache.Modules[name]
-			if !ok {
-				L.Push(lua.LString(fmt.Sprintf("no cached module '%s'", name)))
-				return 1
-			}
-			fn, err := L.Load(bytes.NewReader(module.Content), module.Path)
-			if err != nil {
-				L.RaiseError(err.Error())
-			}
-			L.Push(fn)
-			return 1
-		}
-
-		packagemod := L.RegisterModule(lua.LoadLibName, loFuncs)
-
-		L.SetField(packagemod, "preload", L.NewTable())
-
-		loaders := L.CreateTable(2, 0)
-		L.RawSetInt(loaders, 1, L.NewFunction(loLoaderPreload))
-		L.RawSetInt(loaders, 2, L.NewFunction(loLoaderCache))
-		L.SetField(packagemod, "loaders", loaders)
-		L.SetField(L.Get(lua.RegistryIndex), "_LOADERS", loaders)
-
-		loaded := L.NewTable()
-		L.SetField(packagemod, "loaded", loaded)
-		L.SetField(L.Get(lua.RegistryIndex), "_LOADED", loaded)
-
-		L.SetField(packagemod, "path", lua.LString(loGetPath(lua.LuaPath, lua.LuaPathDefault)))
-		L.SetField(packagemod, "cpath", emptyLString)
-
-		L.Push(packagemod)
-		return 1
-	}
-}
-
-func OpenPackage(moduleCache *ModuleCache) func(L *lua.LState) int {
+func OpenPackage(moduleCache *RuntimeLuaModuleCache) func(L *lua.LState) int {
 	return func(L *lua.LState) int {
 		loLoaderCache := func(L *lua.LState) int {
 			name := L.CheckString(1)
