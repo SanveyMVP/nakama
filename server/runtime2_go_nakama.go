@@ -399,7 +399,10 @@ func (n *RuntimeGoNakamaModule) StreamUserGet(mode uint8, subject, descriptor, l
 		}
 	}
 
-	return n.tracker.GetLocalBySessionIDStreamUserID(sid, stream, uid), nil
+	if meta := n.tracker.GetLocalBySessionIDStreamUserID(sid, stream, uid); meta != nil {
+		return meta, nil
+	}
+	return nil, nil
 }
 
 func (n *RuntimeGoNakamaModule) StreamUserJoin(mode uint8, subject, descriptor, label, userID, sessionID string, hidden, persistence bool, status string) (bool, error) {
