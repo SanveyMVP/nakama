@@ -5,6 +5,8 @@ The format is based on [keep a changelog](http://keepachangelog.com) and this pr
 
 ## [Unreleased]
 
+### Changed
+- Improved Postgres compatibility on TIMESTAMPTZ types.
 
 ## [2.0.3] - 2018-08-10
 ### Added
